@@ -7,7 +7,18 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
-		377A43CA2FDCCA2B00103FE9 /* Aquario_AppApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 377A43C92FDCCA2B00103FE9 /* Aquario_AppApp.swift */; };
+		377A43F62FDCCA2B00103FE9 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 377A43F52FDCCA2B00103FE9 /* Models.swift */; };
+		377A43F82FDCCA2B00103FE9 /* StorageProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 377A43F72FDCCA2B00103FE9 /* StorageProvider.swift */; };
+		377A43FA2FDCCA2B00103FE9 /* NetworkManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = 377A43F92FDCCA2B00103FE9 /* NetworkManager.swift */; };
+		377A43FC2FDCCA2B00103FE9 /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 377A43FB2FDCCA2B00103FE9 /* LoginView.swift */; };
+		377A43FE2FDCCA2B00103FE9 /* VagasView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 377A43FD2FDCCA2B00103FE9 /* VagasView.swift */; };
+		377A43002FDCCA2B00103FE9 /* EntidadesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 377A43FF2FDCCA2B00103FE9 /* EntidadesView.swift */; };
+		377A43022FDCCA2B00103FE9 /* PerfilView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 377A43012FDCCA2B00103FE9 /* PerfilView.swift */; };
+		377A43042FDCCA2B00103FE9 /* RegisterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 377A43032FDCCA2B00103FE9 /* RegisterView.swift */; };
+		377A43062FDCCA2B00103FE9 /* RecursosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 377A43052FDCCA2B00103FE9 /* RecursosView.swift */; };
+		377A43502FDCCA2B00103FE9 /* ProjetosView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 377A43512FDCCA2B00103FE9 /* ProjetosView.swift */; };
+		377A43522FDCCA2B00103FE9 /* SobreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 377A43532FDCCA2B00103FE9 /* SobreView.swift */; };
+		377A43CA2FDCCA2B00103FE9 /* AquarioApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 377A43C92FDCCA2B00103FE9 /* AquarioApp.swift */; };
 		377A43CC2FDCCA2B00103FE9 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 377A43CB2FDCCA2B00103FE9 /* ContentView.swift */; };
 		377A43CE2FDCCA2E00103FE9 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 377A43CD2FDCCA2E00103FE9 /* Assets.xcassets */; };
 		377A43D12FDCCA2E00103FE9 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 377A43D02FDCCA2E00103FE9 /* Preview Assets.xcassets */; };
@@ -35,8 +46,19 @@
 
 /* Begin PBXFileReference section */
 		377A43C62FDCCA2B00103FE9 /* Aquario-App.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Aquario-App.app"; sourceTree = BUILT_PRODUCTS_DIR; };
-		377A43C92FDCCA2B00103FE9 /* Aquario_AppApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Aquario_AppApp.swift; sourceTree = "<group>"; };
+		377A43C92FDCCA2B00103FE9 /* AquarioApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AquarioApp.swift; sourceTree = "<group>"; };
 		377A43CB2FDCCA2B00103FE9 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		377A43F52FDCCA2B00103FE9 /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		377A43F72FDCCA2B00103FE9 /* StorageProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StorageProvider.swift; sourceTree = "<group>"; };
+		377A43F92FDCCA2B00103FE9 /* NetworkManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NetworkManager.swift; sourceTree = "<group>"; };
+		377A43FB2FDCCA2B00103FE9 /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		377A43FD2FDCCA2B00103FE9 /* VagasView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VagasView.swift; sourceTree = "<group>"; };
+		377A43FF2FDCCA2B00103FE9 /* EntidadesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = EntidadesView.swift; sourceTree = "<group>"; };
+		377A43012FDCCA2B00103FE9 /* PerfilView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PerfilView.swift; sourceTree = "<group>"; };
+		377A43032FDCCA2B00103FE9 /* RegisterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RegisterView.swift; sourceTree = "<group>"; };
+		377A43052FDCCA2B00103FE9 /* RecursosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecursosView.swift; sourceTree = "<group>"; };
+		377A43512FDCCA2B00103FE9 /* ProjetosView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjetosView.swift; sourceTree = "<group>"; };
+		377A43532FDCCA2B00103FE9 /* SobreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SobreView.swift; sourceTree = "<group>"; };
 		377A43CD2FDCCA2E00103FE9 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		377A43D02FDCCA2E00103FE9 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
 		377A43D62FDCCA2E00103FE9 /* Aquario-AppTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = "Aquario-AppTests.xctest"; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -94,8 +116,19 @@
 		377A43C82FDCCA2B00103FE9 /* Aquario-App */ = {
 			isa = PBXGroup;
 			children = (
-				377A43C92FDCCA2B00103FE9 /* Aquario_AppApp.swift */,
+				377A43C92FDCCA2B00103FE9 /* AquarioApp.swift */,
 				377A43CB2FDCCA2B00103FE9 /* ContentView.swift */,
+				377A43F52FDCCA2B00103FE9 /* Models.swift */,
+				377A43F72FDCCA2B00103FE9 /* StorageProvider.swift */,
+				377A43F92FDCCA2B00103FE9 /* NetworkManager.swift */,
+				377A43FB2FDCCA2B00103FE9 /* LoginView.swift */,
+				377A43FD2FDCCA2B00103FE9 /* VagasView.swift */,
+				377A43FF2FDCCA2B00103FE9 /* EntidadesView.swift */,
+				377A43012FDCCA2B00103FE9 /* PerfilView.swift */,
+				377A43032FDCCA2B00103FE9 /* RegisterView.swift */,
+				377A43052FDCCA2B00103FE9 /* RecursosView.swift */,
+				377A43512FDCCA2B00103FE9 /* ProjetosView.swift */,
+				377A43532FDCCA2B00103FE9 /* SobreView.swift */,
 				377A43CD2FDCCA2E00103FE9 /* Assets.xcassets */,
 				377A43CF2FDCCA2E00103FE9 /* Preview Content */,
 			);
@@ -258,7 +291,18 @@
 			buildActionMask = 2147483647;
 			files = (
 				377A43CC2FDCCA2B00103FE9 /* ContentView.swift in Sources */,
-				377A43CA2FDCCA2B00103FE9 /* Aquario_AppApp.swift in Sources */,
+				377A43F62FDCCA2B00103FE9 /* Models.swift in Sources */,
+				377A43F82FDCCA2B00103FE9 /* StorageProvider.swift in Sources */,
+				377A43FA2FDCCA2B00103FE9 /* NetworkManager.swift in Sources */,
+				377A43FC2FDCCA2B00103FE9 /* LoginView.swift in Sources */,
+				377A43FE2FDCCA2B00103FE9 /* VagasView.swift in Sources */,
+				377A43002FDCCA2B00103FE9 /* EntidadesView.swift in Sources */,
+				377A43022FDCCA2B00103FE9 /* PerfilView.swift in Sources */,
+				377A43042FDCCA2B00103FE9 /* RegisterView.swift in Sources */,
+				377A43062FDCCA2B00103FE9 /* RecursosView.swift in Sources */,
+				377A43502FDCCA2B00103FE9 /* ProjetosView.swift in Sources */,
+				377A43522FDCCA2B00103FE9 /* SobreView.swift in Sources */,
+				377A43CA2FDCCA2B00103FE9 /* AquarioApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
