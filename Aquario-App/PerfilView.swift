@@ -4,6 +4,7 @@ import UIKit
 
 public struct PerfilView: View {
     @Binding var isAuthenticated: Bool
+    @Environment(\.horizontalSizeClass) private var horizontalSizeClass
     @State private var user: Usuario? = nil
     @State private var isLoading = false
     @State private var errorMessage: String? = nil
@@ -36,7 +37,7 @@ public struct PerfilView: View {
                 .ignoresSafeArea()
 
                 ScrollView {
-                    VStack(spacing: 22) {
+                    VStack(spacing: 18) {
                         if let user {
                             profileHero(user)
                             profileActionsCard
@@ -58,6 +59,8 @@ public struct PerfilView: View {
             .navigationTitle("Meu Perfil")
             .navigationBarTitleDisplayMode(.inline)
             .toolbarColorScheme(.dark, for: .navigationBar)
+            .toolbarBackground(.ultraThinMaterial, for: .navigationBar)
+            .toolbarBackground(.visible, for: .navigationBar)
             .task {
                 customAvatarData = StorageProvider.shared.getProfileAvatarData()
                 linkedEntidade = StorageProvider.shared.getSelectedEntidade()
@@ -94,32 +97,26 @@ public struct PerfilView: View {
     }
 
     private func profileHero(_ user: Usuario) -> some View {
-        VStack(alignment: .leading, spacing: 18) {
+        VStack(alignment: .leading, spacing: 20) {
             HStack(alignment: .top, spacing: 16) {
-                VStack(alignment: .leading, spacing: 12) {
-                    profilePhoto(for: user)
+                profilePhoto(for: user)
 
-                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                        Label("Trocar avatar", systemImage: "camera.fill")
-                            .font(.caption)
-                            .fontWeight(.bold)
-                            .foregroundColor(.white)
-                            .padding(.horizontal, 12)
-                            .padding(.vertical, 8)
-                            .background(Color.white.opacity(0.14))
-                            .clipShape(Capsule())
-                    }
-                }
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("Meu Perfil")
+                        .font(.caption.weight(.bold))
+                        .foregroundColor(Color.white.opacity(0.72))
 
-                VStack(alignment: .leading, spacing: 8) {
                     Text(user.nome)
-                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .font(.system(size: 28, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
+                        .lineLimit(2)
 
                     if let email = user.email {
                         Text(email)
                             .font(.subheadline)
                             .foregroundColor(Color.white.opacity(0.82))
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.85)
                     }
 
                     HStack(spacing: 8) {
@@ -130,14 +127,52 @@ public struct PerfilView: View {
                             profilePill(centro)
                         }
                     }
+                    .padding(.top, 2)
                 }
 
-                Spacer()
+                Spacer(minLength: 0)
             }
 
-            HStack(spacing: 12) {
-                profileStat(title: "Matrícula", value: user.matricula ?? "Não informado")
-                profileStat(title: "Período", value: user.periodoAtual ?? "1º Período")
+            HStack(spacing: 10) {
+                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                    Label("Trocar avatar", systemImage: "camera.fill")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(Color.white.opacity(0.14))
+                        .clipShape(Capsule())
+                }
+
+                Button(action: {
+                    showEntidadeSheet = true
+                }) {
+                    Label(linkedEntidade == nil ? "Inserir entidade" : "Editar entidade", systemImage: "building.2.crop.circle")
+                        .font(.caption)
+                        .fontWeight(.bold)
+                        .foregroundColor(.white)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 10)
+                        .background(Color.white.opacity(0.14))
+                        .clipShape(Capsule())
+                }
+            }
+
+            if horizontalSizeClass == .compact {
+                VStack(spacing: 10) {
+                    HStack(spacing: 10) {
+                        profileStat(title: "Matrícula", value: user.matricula ?? "Não informado")
+                        profileStat(title: "Período", value: user.periodoAtual ?? "1º Período")
+                    }
+                    profileStat(title: "Status", value: user.eVerificado ? "Verificada" : "Pendente")
+                }
+            } else {
+                HStack(spacing: 10) {
+                    profileStat(title: "Matrícula", value: user.matricula ?? "Não informado")
+                    profileStat(title: "Período", value: user.periodoAtual ?? "1º Período")
+                    profileStat(title: "Status", value: user.eVerificado ? "Verificada" : "Pendente")
+                }
             }
 
             HStack(spacing: 10) {
@@ -149,57 +184,75 @@ public struct PerfilView: View {
                 Text(user.eVerificado ? "Conta verificada no Aquário" : "Conta aguardando verificação")
                     .font(.subheadline)
                     .foregroundColor(Color.white.opacity(0.84))
+
+                Spacer()
             }
         }
-        .padding(24)
+        .padding(22)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(
-            LinearGradient(
-                colors: [
-                    Color(red: 0.04, green: 0.17, blue: 0.32),
-                    Color(red: 0.07, green: 0.43, blue: 0.61)
-                ],
-                startPoint: .topLeading,
-                endPoint: .bottomTrailing
-            )
+            ZStack {
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.03, green: 0.15, blue: 0.30),
+                        Color(red: 0.06, green: 0.35, blue: 0.52),
+                        Color(red: 0.10, green: 0.68, blue: 0.78)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+
+                Circle()
+                    .fill(Color.white.opacity(0.12))
+                    .frame(width: 180, height: 180)
+                    .offset(x: 130, y: -110)
+
+                Circle()
+                    .fill(Color.cyan.opacity(0.18))
+                    .frame(width: 110, height: 110)
+                    .offset(x: 150, y: 130)
+            }
         )
         .clipShape(RoundedRectangle(cornerRadius: 30, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: 30, style: .continuous)
                 .stroke(Color.white.opacity(0.12), lineWidth: 1)
         )
+        .shadow(color: Color.black.opacity(0.20), radius: 24, x: 0, y: 16)
     }
 
     @ViewBuilder
     private func profilePhoto(for user: Usuario) -> some View {
         ZStack(alignment: .bottomTrailing) {
-            if let customAvatarData, let image = UIImage(data: customAvatarData) {
-                Image(uiImage: image)
-                    .resizable()
-                    .scaledToFill()
-                    .frame(width: 108, height: 108)
-                    .clipShape(Circle())
-                    .overlay(Circle().stroke(Color.white.opacity(0.30), lineWidth: 3))
-            } else if let url = resolvedURL(from: user.urlFotoPerfil) {
-                AsyncImage(url: url) { phase in
-                    switch phase {
-                    case .success(let image):
-                        image
-                            .resizable()
-                            .scaledToFill()
-                    case .failure, .empty:
-                        initialsView(user.nome)
-                    @unknown default:
-                        initialsView(user.nome)
+            Group {
+                if let customAvatarData, let image = UIImage(data: customAvatarData) {
+                    Image(uiImage: image)
+                        .resizable()
+                        .scaledToFill()
+                } else if let url = resolvedURL(from: user.urlFotoPerfil) {
+                    AsyncImage(url: url) { phase in
+                        switch phase {
+                        case .success(let image):
+                            image
+                                .resizable()
+                                .scaledToFill()
+                        case .failure, .empty:
+                            initialsView(user.nome)
+                        @unknown default:
+                            initialsView(user.nome)
+                        }
                     }
+                } else {
+                    initialsView(user.nome)
                 }
-                .frame(width: 108, height: 108)
-                .clipShape(Circle())
-                .overlay(Circle().stroke(Color.white.opacity(0.30), lineWidth: 3))
-            } else {
-                initialsView(user.nome)
-                    .frame(width: 108, height: 108)
             }
+            .frame(width: 104, height: 104)
+            .clipShape(Circle())
+            .overlay(
+                Circle()
+                    .stroke(Color.white.opacity(0.30), lineWidth: 3)
+            )
+            .shadow(color: Color.black.opacity(0.16), radius: 12, x: 0, y: 8)
 
             Image(systemName: "camera.fill")
                 .font(.caption.weight(.bold))
@@ -207,24 +260,37 @@ public struct PerfilView: View {
                 .padding(10)
                 .background(Color.white)
                 .clipShape(Circle())
+                .shadow(color: Color.black.opacity(0.12), radius: 8, x: 0, y: 4)
         }
     }
 
     private var profileActionsCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Ações do perfil")
-                .font(.headline)
-                .foregroundColor(Color(red: 0.05, green: 0.20, blue: 0.38))
+            SectionHeader(title: "Ações do perfil", subtitle: "Atualize avatar e entidade rapidamente.")
 
-            HStack(spacing: 12) {
-                PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
-                    actionPill(icon: "person.crop.circle.badge.plus", title: "Trocar avatar")
+            if horizontalSizeClass == .compact {
+                VStack(spacing: 12) {
+                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                        actionPill(icon: "person.crop.circle.badge.plus", title: "Trocar avatar")
+                    }
+
+                    Button(action: {
+                        showEntidadeSheet = true
+                    }) {
+                        actionPill(icon: "building.2.crop.circle", title: linkedEntidade == nil ? "Inserir entidade" : "Editar entidade")
+                    }
                 }
+            } else {
+                HStack(spacing: 12) {
+                    PhotosPicker(selection: $selectedPhotoItem, matching: .images) {
+                        actionPill(icon: "person.crop.circle.badge.plus", title: "Trocar avatar")
+                    }
 
-                Button(action: {
-                    showEntidadeSheet = true
-                }) {
-                    actionPill(icon: "building.2.crop.circle", title: linkedEntidade == nil ? "Inserir entidade" : "Editar entidade")
+                    Button(action: {
+                        showEntidadeSheet = true
+                    }) {
+                        actionPill(icon: "building.2.crop.circle", title: linkedEntidade == nil ? "Inserir entidade" : "Editar entidade")
+                    }
                 }
             }
 
@@ -246,17 +312,19 @@ public struct PerfilView: View {
                 .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
             }
         }
-        .padding(22)
-        .background(Color.white)
+        .padding(20)
+        .background(.ultraThinMaterial)
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .shadow(color: Color.black.opacity(0.10), radius: 18, x: 0, y: 12)
+        .overlay(
+            RoundedRectangle(cornerRadius: 26, style: .continuous)
+                .stroke(Color.white.opacity(0.55), lineWidth: 1)
+        )
+        .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 10)
     }
 
     private var linkedEntidadeCard: some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Minha Entidade")
-                .font(.headline)
-                .foregroundColor(Color(red: 0.05, green: 0.20, blue: 0.38))
+            SectionHeader(title: "Minha entidade", subtitle: "Escolha a comunidade que representa sua rotina.")
 
             if let linkedEntidade {
                 HStack(spacing: 14) {
@@ -282,22 +350,26 @@ public struct PerfilView: View {
                     Spacer()
                 }
             } else {
-                Text("Selecione a entidade com a qual você participa para deixar o perfil mais completo no app.")
-                    .font(.subheadline)
-                    .foregroundColor(Color(red: 0.28, green: 0.39, blue: 0.52))
+                HStack(spacing: 12) {
+                    Image(systemName: "building.2.crop.circle")
+                        .font(.title3)
+                        .foregroundColor(Color(red: 0.05, green: 0.50, blue: 0.80))
+
+                    Text("Selecione a entidade com a qual você participa para destacar seus vínculos acadêmicos e comunitários.")
+                        .font(.subheadline)
+                        .foregroundColor(Color(red: 0.28, green: 0.39, blue: 0.52))
+                }
             }
         }
-        .padding(22)
-        .background(Color.white)
+        .padding(20)
+        .background(Color.white.opacity(0.96))
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .shadow(color: Color.black.opacity(0.10), radius: 18, x: 0, y: 12)
+        .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 10)
     }
 
     private func accountInfoCard(_ user: Usuario) -> some View {
         VStack(alignment: .leading, spacing: 14) {
-            Text("Dados da conta")
-                .font(.headline)
-                .foregroundColor(Color(red: 0.05, green: 0.20, blue: 0.38))
+            SectionHeader(title: "Dados da conta", subtitle: "Informações principais vinculadas ao seu login.")
 
             VStack(spacing: 12) {
                 infoRow(label: "Nome", value: user.nome)
@@ -307,23 +379,24 @@ public struct PerfilView: View {
                 infoRow(label: "Status", value: user.eVerificado ? "Verificado" : "Pendente")
             }
         }
-        .padding(22)
-        .background(Color.white)
+        .padding(20)
+        .background(Color.white.opacity(0.96))
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .shadow(color: Color.black.opacity(0.10), radius: 18, x: 0, y: 12)
+        .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 10)
     }
 
     private func actionPill(icon: String, title: String) -> some View {
-        HStack {
+        HStack(spacing: 10) {
             Image(systemName: icon)
+                .font(.headline)
             Text(title)
-                .lineLimit(1)
+                .fixedSize(horizontal: false, vertical: true)
             Spacer()
         }
         .font(.subheadline.weight(.semibold))
         .foregroundColor(.white)
         .padding(14)
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, minHeight: 56, alignment: .leading)
         .background(
             LinearGradient(
                 colors: [
@@ -335,6 +408,7 @@ public struct PerfilView: View {
             )
         )
         .clipShape(RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .shadow(color: Color.black.opacity(0.12), radius: 10, x: 0, y: 6)
     }
 
     private func infoRow(label: String, value: String) -> some View {
@@ -368,29 +442,28 @@ public struct PerfilView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text(title)
                 .font(.caption2)
-                .foregroundColor(Color.white.opacity(0.68))
+                .foregroundColor(Color.white.opacity(0.72))
             Text(value)
                 .font(.subheadline)
                 .fontWeight(.bold)
                 .foregroundColor(.white)
+                .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(16)
-        .background(Color.white.opacity(0.10))
+        .padding(14)
+        .background(Color.white.opacity(0.12))
         .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
     }
 
     private var progressCard: some View {
         VStack(alignment: .leading, spacing: 16) {
-            Text("Progresso da Grade Curricular")
-                .font(.headline)
-                .foregroundColor(Color(red: 0.05, green: 0.20, blue: 0.38))
+            SectionHeader(title: "Progresso da grade", subtitle: "Acompanhe sua evolução por disciplinas concluídas.")
 
             HStack(spacing: 20) {
                 ZStack {
                     Circle()
                         .stroke(Color(red: 0.82, green: 0.90, blue: 0.97), lineWidth: 10)
-                        .frame(width: 88, height: 88)
+                        .frame(width: 84, height: 84)
 
                     Circle()
                         .trim(from: 0, to: CGFloat(progressPercent))
@@ -405,7 +478,7 @@ public struct PerfilView: View {
                             ),
                             style: StrokeStyle(lineWidth: 10, lineCap: .round)
                         )
-                        .frame(width: 88, height: 88)
+                        .frame(width: 84, height: 84)
                         .rotationEffect(.degrees(-90))
 
                     Text("\(Int(progressPercent * 100))%")
@@ -415,38 +488,42 @@ public struct PerfilView: View {
                 }
 
                 VStack(alignment: .leading, spacing: 8) {
-                    Text("Disciplinas concluídas")
+                    Text("\(completedSubjectsCount) de \(totalSubjectsCount) disciplinas")
                         .font(.subheadline)
-                        .foregroundColor(.secondary)
-                    Text("\(completedSubjectsCount) de \(totalSubjectsCount)")
-                        .font(.title3)
-                        .fontWeight(.bold)
+                        .fontWeight(.semibold)
                         .foregroundColor(Color(red: 0.05, green: 0.20, blue: 0.38))
-                    Text("Acompanhe seu avanço por disciplina e por período.")
+                    Text("Esse painel pode evoluir no futuro para refletir dados reais da sua grade.")
                         .font(.caption)
                         .foregroundColor(Color(red: 0.28, green: 0.39, blue: 0.52))
                 }
             }
         }
-        .padding(22)
-        .background(Color.white)
+        .padding(20)
+        .background(Color.white.opacity(0.96))
         .clipShape(RoundedRectangle(cornerRadius: 26, style: .continuous))
-        .shadow(color: Color.black.opacity(0.10), radius: 18, x: 0, y: 12)
+        .shadow(color: Color.black.opacity(0.08), radius: 16, x: 0, y: 10)
     }
 
     private var logoutButton: some View {
         Button(action: handleLogout) {
             HStack {
                 Image(systemName: "rectangle.portrait.and.arrow.right")
-                Text("Sair da Conta")
+                Text("Sair da conta")
                 Spacer()
             }
             .font(.headline)
             .foregroundColor(.white)
             .padding(18)
-            .background(Color(red: 0.78, green: 0.18, blue: 0.22))
+            .background(
+                LinearGradient(
+                    colors: [Color(red: 0.78, green: 0.18, blue: 0.22), Color(red: 0.94, green: 0.34, blue: 0.29)],
+                    startPoint: .leading,
+                    endPoint: .trailing
+                )
+            )
             .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
         }
+        .shadow(color: Color.black.opacity(0.10), radius: 14, x: 0, y: 8)
     }
 
     private var loadingState: some View {
@@ -634,6 +711,22 @@ private struct EntidadeMiniArtwork: View {
             return URL(string: "https://aquarioufpb.com" + urlString)
         }
         return URL(string: "https://aquarioufpb.com/" + urlString)
+    }
+}
+
+private struct SectionHeader: View {
+    let title: String
+    let subtitle: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(.headline)
+                .foregroundColor(Color(red: 0.05, green: 0.20, blue: 0.38))
+            Text(subtitle)
+                .font(.caption)
+                .foregroundColor(Color(red: 0.28, green: 0.39, blue: 0.52))
+        }
     }
 }
 
