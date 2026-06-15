@@ -25,9 +25,6 @@ private enum GradesDisplayMode: String, CaseIterable {
 
 public struct RecursosView: View {
     @State private var selectedTab: String? = nil
-    @State private var guias: [Guia] = []
-    @State private var isLoadingGuias = false
-    @State private var errorGuias: String? = nil
     
     // Grid configuration for premium dashboard
     private let columns = [
@@ -40,7 +37,7 @@ public struct RecursosView: View {
         RecursoItem(id: "mapas", title: "Mapas dos Prédios", description: "Consulte salas, andares e laboratórios com o mapa oficial.", systemIcon: "map.fill", accentSymbol: "building.2.crop.circle", gradientColors: [.green, .emerald], destination: .web(path: "/mapas")),
         RecursoItem(id: "grades", title: "Grades Curriculares", description: "Veja o grafo do curso, pré-requisitos e períodos.", systemIcon: "point.3.filled.connected.trianglepath.dotted", accentSymbol: "point.topleft.down.curvedto.point.bottomright.up", gradientColors: [.purple, .indigo], destination: .native),
         RecursoItem(id: "calendario-academico", title: "Calendário Acadêmico", description: "Confira matrículas, feriados, exames e datas importantes.", systemIcon: "calendar.badge.clock", accentSymbol: "calendar.day.timeline.left", gradientColors: [.pink, .red], destination: .native),
-        RecursoItem(id: "guias", title: "Guias e Recursos", description: "Leia orientações acadêmicas sem sair do app.", systemIcon: "book.closed.fill", accentSymbol: "books.vertical.fill", gradientColors: [.cyan, .blue], destination: .native),
+        RecursoItem(id: "guias", title: "Guias e Recursos", description: "Consulte os guias oficiais do seu curso com leitura nativa e completa.", systemIcon: "book.closed.fill", accentSymbol: "books.vertical.fill", gradientColors: [.cyan, .blue], destination: .native),
         RecursoItem(id: "sigaa", title: "SIGAA Caiu?", description: "Verifique o status do portal acadêmico em tempo real.", systemIcon: "wifi.router.fill", accentSymbol: "wave.3.right.circle.fill", gradientColors: [.teal, .cyan], destination: .external(url: "https://sigaacaiu.com"))
     ]
     
@@ -137,7 +134,7 @@ public struct RecursosView: View {
                 case "calendario-academico":
                     CalendarioView()
                 case "guias":
-                    GuiasListView(guias: guias, isLoading: isLoadingGuias, error: errorGuias, reload: loadGuias)
+                    GuiasHubView()
                 default:
                     EmptyView()
                 }
@@ -153,7 +150,7 @@ public struct RecursosView: View {
                         .font(.system(size: 38, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
 
-                    Text("Encontre horários, mapas, grades, datas acadêmicas e guias do CI em um só lugar.")
+                    Text("Encontre horários, mapas, grades, datas acadêmicas e os guias oficiais do CI em um só lugar.")
                         .font(.subheadline)
                         .foregroundColor(Color.white.opacity(0.90))
                 }
@@ -206,37 +203,7 @@ public struct RecursosView: View {
                 UIApplication.shared.open(url)
             }
         case .native, .web:
-            if id == "guias" {
-                loadGuias()
-            }
             selectedTab = id
-        }
-    }
-
-    private func loadGuias() {
-        let cached = StorageProvider.shared.getCachedGuias()
-        if guias.isEmpty, !cached.isEmpty {
-            guias = cached
-        }
-
-        guard !isLoadingGuias else { return }
-
-        isLoadingGuias = true
-        errorGuias = nil
-
-        Task {
-            do {
-                let fetched = try await NetworkManager.shared.fetchGuias()
-                await MainActor.run {
-                    guias = fetched
-                    isLoadingGuias = false
-                }
-            } catch {
-                await MainActor.run {
-                    errorGuias = error.localizedDescription
-                    isLoadingGuias = false
-                }
-            }
         }
     }
 }
@@ -1879,80 +1846,272 @@ private extension CategoriaEventoAcademico {
     }
 }
 
-// MARK: - Sub-View 6: Guias e Recursos (Conexão Real)
-struct GuiasListView: View {
-    let guias: [Guia]
-    let isLoading: Bool
-    let error: String?
-    let reload: () -> Void
-    
-    @Environment(\.dismiss) var dismiss
-    
+// MARK: - Sub-View 6: Guias e Recursos
+struct GuideNode: Identifiable, Hashable {
+    let id: String
+    let title: String
+    let summary: String
+    let sitePath: String
+    let repoFilePath: String?
+    let assetDirectoryPath: String?
+    let children: [GuideNode]
+
+    var hasContent: Bool {
+        repoFilePath != nil
+    }
+
+    var childrenCount: Int {
+        children.count
+    }
+}
+
+struct GuideSearchResult: Identifiable {
+    let node: GuideNode
+    let trail: [GuideNode]
+
+    var id: String {
+        node.id
+    }
+}
+
+struct GuideContentBlock: Identifiable {
+    enum Kind {
+        case markdown(String)
+        case image(url: URL, alt: String)
+    }
+
+    let id = UUID()
+    let kind: Kind
+}
+
+enum GuideCatalog {
+    static let repositoryBasePath = "centro-de-informatica"
+
+    static let allRoots: [GuideNode] = [
+        category(
+            id: "bem-vindo",
+            title: "Bem Vindo",
+            summary: "Comece por aqui com introdução ao CI e dicas práticas para os primeiros períodos.",
+            children: [
+                leaf("bem-vindo-introducao", "Introdução", "Boas-vindas ao curso e visão geral do que explorar no Centro de Informática.", "guias/bem-vindo/introducao", "\(repositoryBasePath)/0 - Bem Vindo/1 - Introdução.md", assetDirectory: "\(repositoryBasePath)/0 - Bem Vindo"),
+                leaf("bem-vindo-dicas", "Dicas", "Orientações para rotina acadêmica, estudo e adaptação ao campus.", "guias/bem-vindo/dicas", "\(repositoryBasePath)/0 - Bem Vindo/2 - Dicas.md", assetDirectory: "\(repositoryBasePath)/0 - Bem Vindo")
+            ]
+        ),
+        category(
+            id: "grupos",
+            title: "Grupos",
+            summary: "Conheça atlética, grupos, ligas, laboratórios e o PET do CI.",
+            children: [
+                leaf("grupos-atetica", "Atética", "Informações sobre a atlética e participação estudantil.", "guias/grupos/atetica", "\(repositoryBasePath)/1 - Grupos/Atética.md", assetDirectory: "\(repositoryBasePath)/1 - Grupos"),
+                leaf("grupos-grupos-e-ligas", "Grupos e Ligas", "Mapa dos grupos acadêmicos e ligas em atividade no CI.", "guias/grupos/grupos-e-ligas", "\(repositoryBasePath)/1 - Grupos/Grupos e Ligas.md", assetDirectory: "\(repositoryBasePath)/1 - Grupos"),
+                leaf("grupos-laboratorios", "Laboratórios", "Veja laboratórios e oportunidades de pesquisa do centro.", "guias/grupos/laboratorios", "\(repositoryBasePath)/1 - Grupos/Laboratórios.md", assetDirectory: "\(repositoryBasePath)/1 - Grupos"),
+                leaf("grupos-pet", "PET", "Saiba como funciona o PET e como participar.", "guias/grupos/pet", "\(repositoryBasePath)/1 - Grupos/PET.md", assetDirectory: "\(repositoryBasePath)/1 - Grupos")
+            ]
+        ),
+        category(
+            id: "informacoes",
+            title: "Informações",
+            summary: "Consulte bolsas, salas e formas de deslocamento para o CI.",
+            children: [
+                leaf("informacoes-bolsas", "Bolsas", "Entenda modalidades, oportunidades e caminhos para apoio acadêmico.", "guias/informacoes/bolsas", "\(repositoryBasePath)/2 - Informações/Bolsas.md", assetDirectory: "\(repositoryBasePath)/2 - Informações"),
+                leaf("informacoes-salas", "Salas", "Referência rápida sobre salas e uso dos espaços do CI.", "guias/informacoes/salas", "\(repositoryBasePath)/2 - Informações/Salas.md", assetDirectory: "\(repositoryBasePath)/2 - Informações"),
+                leaf("informacoes-transporte", "Transporte", "Horários do circular, paradas e dicas para chegar ao campus.", "guias/informacoes/transporte", "\(repositoryBasePath)/2 - Informações/Transporte.md", assetDirectory: "\(repositoryBasePath)/2 - Informações")
+            ]
+        ),
+        category(
+            id: "ciencia-da-computacao",
+            title: "Ciencia da Computação",
+            summary: "Explore curso, coordenação, estrutura curricular e grade de Ciência da Computação.",
+            children: [
+                leaf("cc-sobre", "Sobre o Curso", "Objetivos, formação e panorama do curso de Ciência da Computação.", "guias/ciencia-da-computacao/sobre-o-curso", "\(repositoryBasePath)/Ciencia da Computação/0 - Sobre o Curso.md", assetDirectory: "\(repositoryBasePath)/Ciencia da Computação"),
+                leaf("cc-coordenacao", "Coordenação", "Contatos, funcionamento e orientações da coordenação do curso.", "guias/ciencia-da-computacao/coordenacao", "\(repositoryBasePath)/Ciencia da Computação/Coordenação.md", assetDirectory: "\(repositoryBasePath)/Ciencia da Computação"),
+                node(
+                    id: "cc-estrutura",
+                    title: "Estrutura CC",
+                    summary: "Veja a estrutura curricular, atividades extracurriculares e complementares flexíveis.",
+                    sitePath: "guias/ciencia-da-computacao/estrutura-cc",
+                    repoFilePath: "\(repositoryBasePath)/Ciencia da Computação/Estrutura CC.md",
+                    assetDirectoryPath: "\(repositoryBasePath)/Ciencia da Computação",
+                    children: [
+                        leaf("cc-atividades", "Atividades Extracurriculares", "Descubra formas de enriquecer sua formação além das disciplinas.", "guias/ciencia-da-computacao/estrutura-cc/atividades-extracurriculares", "\(repositoryBasePath)/Ciencia da Computação/Estrutura CC/Atividades Extracurriculares.md", assetDirectory: "\(repositoryBasePath)/Ciencia da Computação/Estrutura CC"),
+                        leaf("cc-complementares", "Complementares Flexíveis", "Entenda como cumprir as complementares flexíveis do curso.", "guias/ciencia-da-computacao/estrutura-cc/complementares-flexiveis", "\(repositoryBasePath)/Ciencia da Computação/Estrutura CC/Complementares Flexíveis.md", assetDirectory: "\(repositoryBasePath)/Ciencia da Computação/Estrutura CC")
+                    ]
+                ),
+                leaf("cc-grade", "Grade", "Visualize o fluxograma e a organização da grade do curso.", "guias/ciencia-da-computacao/grade", "\(repositoryBasePath)/Ciencia da Computação/Grade.md", assetDirectory: "\(repositoryBasePath)/Ciencia da Computação")
+            ]
+        ),
+        category(
+            id: "ciencia-de-dados-e-inteligencia-artificial",
+            title: "Ciencia de Dados e Inteligencia Artificial",
+            summary: "Informações do curso de CDIA, com visão geral e coordenação.",
+            children: [
+                leaf("cdia-sobre", "Sobre o Curso", "Conheça foco, perfil e possibilidades do curso de CDIA.", "guias/ciencia-de-dados-e-inteligencia-artificial/sobre-o-curso", "\(repositoryBasePath)/Ciencia de Dados e Inteligencia Artificial/0 - Sobre o Curso.md", assetDirectory: "\(repositoryBasePath)/Ciencia de Dados e Inteligencia Artificial"),
+                leaf("cdia-coordenacao", "Coordenação", "Contatos e orientações da coordenação de CDIA.", "guias/ciencia-de-dados-e-inteligencia-artificial/coordenacao", "\(repositoryBasePath)/Ciencia de Dados e Inteligencia Artificial/Coordenação.md", assetDirectory: "\(repositoryBasePath)/Ciencia de Dados e Inteligencia Artificial")
+            ]
+        ),
+        category(
+            id: "engenharia-da-computacao",
+            title: "Engenharia da Computação",
+            summary: "Consulte curso, coordenação, estrutura e grade de Engenharia da Computação.",
+            children: [
+                leaf("ec-sobre", "Sobre o Curso", "Panorama do curso e das trilhas formativas de Engenharia da Computação.", "guias/engenharia-da-computacao/sobre-o-curso", "\(repositoryBasePath)/Engenharia da Computação/0 - Sobre o Curso.md", assetDirectory: "\(repositoryBasePath)/Engenharia da Computação"),
+                leaf("ec-coordenacao", "Coordenação", "Contatos e orientações da coordenação de Engenharia da Computação.", "guias/engenharia-da-computacao/coordenacao", "\(repositoryBasePath)/Engenharia da Computação/Coordenação.md", assetDirectory: "\(repositoryBasePath)/Engenharia da Computação"),
+                node(
+                    id: "ec-estrutura",
+                    title: "Estrutura EC",
+                    summary: "Veja a organização curricular e as atividades complementares do curso.",
+                    sitePath: "guias/engenharia-da-computacao/estrutura-ec",
+                    repoFilePath: "\(repositoryBasePath)/Engenharia da Computação/Estrutura EC.md",
+                    assetDirectoryPath: "\(repositoryBasePath)/Engenharia da Computação",
+                    children: [
+                        leaf("ec-atividades", "Atividades Extracurriculares", "Conheça experiências que ampliam a formação em EC.", "guias/engenharia-da-computacao/estrutura-ec/atividades-extracurriculares", "\(repositoryBasePath)/Engenharia da Computação/Estrutura EC/Atividades Extracurriculares.md", assetDirectory: "\(repositoryBasePath)/Engenharia da Computação/Estrutura EC"),
+                        leaf("ec-complementares", "Complementares Flexíveis", "Entenda as regras e possibilidades das complementares flexíveis de EC.", "guias/engenharia-da-computacao/estrutura-ec/complementares-flexiveis", "\(repositoryBasePath)/Engenharia da Computação/Estrutura EC/Complementares Flexíveis.md", assetDirectory: "\(repositoryBasePath)/Engenharia da Computação/Estrutura EC")
+                    ]
+                ),
+                leaf("ec-grade", "Grade", "Acesse a representação visual da grade de Engenharia da Computação.", "guias/engenharia-da-computacao/grade", "\(repositoryBasePath)/Engenharia da Computação/Grade.md", assetDirectory: "\(repositoryBasePath)/Engenharia da Computação")
+            ]
+        )
+    ]
+
+    static func rawURL(for repoPath: String) -> URL? {
+        let encoded = repoPath.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed) ?? repoPath
+        return URL(string: "https://raw.githubusercontent.com/aquario-ufpb/aquario-guias/main/\(encoded)")
+    }
+
+    static func resolvedAssetURL(relativePath: String, baseDirectory: String?) -> URL? {
+        guard let baseDirectory else { return nil }
+        let normalized = normalize(relativePath: relativePath, baseDirectory: baseDirectory)
+        return rawURL(for: normalized)
+    }
+
+    private static func normalize(relativePath: String, baseDirectory: String) -> String {
+        var parts = baseDirectory.split(separator: "/").map(String.init)
+        for piece in relativePath.split(separator: "/").map(String.init) {
+            if piece == "." || piece.isEmpty {
+                continue
+            } else if piece == ".." {
+                if !parts.isEmpty {
+                    parts.removeLast()
+                }
+            } else {
+                parts.append(piece)
+            }
+        }
+        return parts.joined(separator: "/")
+    }
+
+    private static func category(id: String, title: String, summary: String, children: [GuideNode]) -> GuideNode {
+        node(id: id, title: title, summary: summary, sitePath: "guias/\(id)", repoFilePath: nil, assetDirectoryPath: nil, children: children)
+    }
+
+    private static func leaf(_ id: String, _ title: String, _ summary: String, _ sitePath: String, _ repoPath: String, assetDirectory: String) -> GuideNode {
+        node(id: id, title: title, summary: summary, sitePath: sitePath, repoFilePath: repoPath, assetDirectoryPath: assetDirectory, children: [])
+    }
+
+    private static func node(id: String, title: String, summary: String, sitePath: String, repoFilePath: String?, assetDirectoryPath: String?, children: [GuideNode]) -> GuideNode {
+        GuideNode(
+            id: id,
+            title: title,
+            summary: summary,
+            sitePath: sitePath,
+            repoFilePath: repoFilePath,
+            assetDirectoryPath: assetDirectoryPath,
+            children: children
+        )
+    }
+}
+
+actor GuideContentCache {
+    static let shared = GuideContentCache()
+    private var cachedMarkdown: [String: String] = [:]
+
+    func markdown(for repoPath: String) async throws -> String {
+        if let cached = cachedMarkdown[repoPath] {
+            return cached
+        }
+
+        guard let url = GuideCatalog.rawURL(for: repoPath) else {
+            throw ApiError(message: "Não foi possível montar o endereço do guia.", code: "GUIDE_URL")
+        }
+
+        let (data, response) = try await URLSession.shared.data(from: url)
+        if let httpResponse = response as? HTTPURLResponse, !(200...299).contains(httpResponse.statusCode) {
+            throw ApiError(message: "Não foi possível carregar o conteúdo do guia.", code: "GUIDE_HTTP_\(httpResponse.statusCode)")
+        }
+
+        guard let markdown = String(data: data, encoding: .utf8) else {
+            throw ApiError(message: "Conteúdo do guia em formato inválido.", code: "GUIDE_ENCODING")
+        }
+
+        cachedMarkdown[repoPath] = markdown
+        return markdown
+    }
+}
+
+struct GuiasHubView: View {
+    @Environment(\.dismiss) private var dismiss
+    @State private var searchText = ""
+
+    private var searchResults: [GuideSearchResult] {
+        let query = normalized(searchText)
+        guard !query.isEmpty else { return [] }
+        return flattenedNodes(from: GuideCatalog.allRoots)
+            .filter { result in
+                normalized(result.node.title).contains(query) || normalized(result.node.summary).contains(query)
+            }
+    }
+
     var body: some View {
         NavigationStack {
             ZStack {
-                if isLoading {
-                    ProgressView("Carregando Guias da API...")
-                } else if let error = error {
-                    VStack(spacing: 16) {
-                        Image(systemName: "exclamationmark.triangle.fill")
-                            .font(.largeTitle)
-                            .foregroundColor(.yellow)
-                        Text("Erro ao conectar ao servidor")
-                            .font(.headline)
-                        Text(error)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
-                            .padding(.horizontal)
-                        
-                        Button("Tentar Novamente") {
-                            reload()
-                        }
-                        .buttonStyle(.borderedProminent)
-                    }
-                } else if guias.isEmpty {
-                    VStack(spacing: 12) {
-                        Image(systemName: "book.closed")
-                            .font(.largeTitle)
-                            .foregroundColor(.gray)
-                        Text("Nenhum guia disponível")
-                            .font(.headline)
-                    }
-                } else {
-                    List(guias) { guia in
-                        NavigationLink(destination: GuiaDetailView(guia: guia)) {
-                            VStack(alignment: .leading, spacing: 6) {
-                                Text(guia.titulo)
-                                    .font(.headline)
-                                
-                                if let desc = guia.descricao {
-                                    Text(desc)
-                                        .font(.caption)
-                                        .foregroundColor(.secondary)
-                                        .lineLimit(2)
-                                }
-                                
-                                HStack {
-                                    ForEach(guia.tags, id: \.self) { tag in
-                                        Text(tag)
-                                            .font(.system(size: 10, weight: .bold))
-                                            .foregroundColor(.cyan)
-                                            .padding(.horizontal, 6)
-                                            .padding(.vertical, 2)
-                                            .background(Color.cyan.opacity(0.1))
-                                            .cornerRadius(4)
+                LinearGradient(
+                    colors: [
+                        Color(red: 0.03, green: 0.10, blue: 0.22),
+                        Color(red: 0.04, green: 0.20, blue: 0.34),
+                        Color(red: 0.78, green: 0.92, blue: 0.98)
+                    ],
+                    startPoint: .topLeading,
+                    endPoint: .bottomTrailing
+                )
+                .ignoresSafeArea()
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 18) {
+                        guiasHeader
+                        searchSection
+
+                        if searchText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                            VStack(spacing: 14) {
+                                ForEach(GuideCatalog.allRoots) { root in
+                                    NavigationLink(destination: GuideNodeDetailView(node: root, trail: [root])) {
+                                        GuideRootCardView(node: root)
                                     }
+                                    .buttonStyle(.plain)
                                 }
-                                .padding(.top, 2)
                             }
-                            .padding(.vertical, 4)
+                        } else if searchResults.isEmpty {
+                            emptyState
+                        } else {
+                            VStack(alignment: .leading, spacing: 14) {
+                                Text("Resultados")
+                                    .font(.headline)
+                                    .foregroundColor(.white)
+
+                                ForEach(searchResults) { result in
+                                    NavigationLink(destination: GuideNodeDetailView(node: result.node, trail: result.trail)) {
+                                        GuideSearchCardView(result: result)
+                                    }
+                                    .buttonStyle(.plain)
+                                }
+                            }
                         }
                     }
-                    .listStyle(.insetGrouped)
+                    .padding(20)
                 }
             }
-            .navigationTitle("Guias Acadêmicos")
+            .navigationTitle("Guias")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarColorScheme(.dark, for: .navigationBar)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Fechar") { dismiss() }
@@ -1960,95 +2119,535 @@ struct GuiasListView: View {
             }
         }
     }
-}
 
-// Detail View for a Guide
-struct GuiaDetailView: View {
-    let guia: Guia
-    
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
-                headerView
-                
-                Divider()
-                
-                sectionsView
+    private var guiasHeader: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 8) {
+                    Text("Bem-vindo aos Guias do Centro de Informática")
+                        .font(.system(size: 30, weight: .bold, design: .rounded))
+                        .foregroundColor(.white)
+
+                    Text("Aqui estão todos os tópicos disponíveis para explorar, agora organizados de forma nativa no aplicativo.")
+                        .font(.subheadline)
+                        .foregroundColor(Color.white.opacity(0.86))
+                }
+
+                Spacer(minLength: 12)
+
+                Image(systemName: "books.vertical.fill")
+                    .font(.system(size: 24, weight: .bold))
+                    .foregroundColor(.white)
+                    .frame(width: 54, height: 54)
+                    .background(Color.white.opacity(0.12))
+                    .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
             }
-            .padding(.vertical)
+
+            HStack(spacing: 10) {
+                guidePill(text: "\(GuideCatalog.allRoots.count) áreas", icon: "rectangle.grid.1x2.fill")
+                guidePill(text: "\(flattenedNodes(from: GuideCatalog.allRoots).count) tópicos", icon: "text.book.closed.fill")
+            }
         }
-        .navigationBarTitleDisplayMode(.inline)
+        .padding(22)
+        .background(Color.white.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
     }
-    
-    private var headerView: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text(guia.titulo)
-                .font(.title)
-                .bold()
-            
-            if let desc = guia.descricao {
-                Text(desc)
-                    .foregroundColor(.secondary)
-            }
+
+    private func guidePill(text: String, icon: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+            Text(text)
         }
-        .padding(.horizontal)
+        .font(.caption)
+        .fontWeight(.bold)
+        .foregroundColor(.white)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.12))
+        .clipShape(Capsule())
     }
-    
-    @ViewBuilder
-    private var sectionsView: some View {
-        if let secoes = guia.secoes, !secoes.isEmpty {
-            let sortedSecoes = secoes.sorted(by: { $0.ordem < $1.ordem })
-            ForEach(sortedSecoes) { secao in
-                sectionItem(secao)
-            }
-        } else {
-            Text("Nenhum conteúdo cadastrado para este guia.")
-                .italic()
-                .foregroundColor(.secondary)
-                .padding()
-        }
-    }
-    
-    @ViewBuilder
-    private func sectionItem(_ secao: SecaoGuia) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
-            Text(secao.titulo)
-                .font(.title3)
-                .bold()
-                .foregroundColor(.blue)
-            
-            if let conteudo = secao.conteudo {
-                Text(conteudo)
-                    .font(.body)
-                    .foregroundColor(.primary)
-                    .lineSpacing(4)
-            }
-            
-            if let subsecoes = secao.subsecoes, !subsecoes.isEmpty {
-                let sortedSubs = subsecoes.sorted(by: { $0.ordem < $1.ordem })
-                ForEach(sortedSubs) { sub in
-                    subSectionItem(sub)
+
+    private var searchSection: some View {
+        HStack(spacing: 12) {
+            Image(systemName: "magnifyingglass")
+                .foregroundColor(Color.white.opacity(0.72))
+
+            TextField("Buscar guia, curso ou tópico", text: $searchText)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .foregroundColor(.white)
+
+            if !searchText.isEmpty {
+                Button {
+                    searchText = ""
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundColor(Color.white.opacity(0.72))
                 }
             }
         }
-        .padding(.horizontal)
-        .padding(.bottom, 12)
+        .padding(16)
+        .background(Color.white.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
     }
-    
-    private func subSectionItem(_ sub: SubSecaoGuia) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(sub.titulo)
+
+    private var emptyState: some View {
+        VStack(spacing: 12) {
+            Image(systemName: "doc.text.magnifyingglass")
+                .font(.system(size: 28, weight: .bold))
+                .foregroundColor(.white)
+            Text("Nenhum guia encontrado para essa busca.")
                 .font(.headline)
-            
-            if let subConteudo = sub.conteudo {
-                Text(subConteudo)
-                    .font(.body)
-                    .foregroundColor(.secondary)
-                    .lineSpacing(4)
+                .foregroundColor(.white)
+                .multilineTextAlignment(.center)
+        }
+        .padding(24)
+        .frame(maxWidth: .infinity)
+        .background(Color.white.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+    }
+
+    private func flattenedNodes(from roots: [GuideNode]) -> [GuideSearchResult] {
+        var results: [GuideSearchResult] = []
+
+        func walk(_ node: GuideNode, trail: [GuideNode]) {
+            if !node.children.isEmpty || node.hasContent {
+                results.append(GuideSearchResult(node: node, trail: trail))
+            }
+            for child in node.children {
+                walk(child, trail: trail + [child])
             }
         }
-        .padding(.leading)
-        .padding(.top, 4)
+
+        for root in roots {
+            walk(root, trail: [root])
+        }
+
+        return results
+    }
+
+    private func normalized(_ text: String) -> String {
+        text.folding(options: .diacriticInsensitive, locale: .current).lowercased()
+    }
+}
+
+struct GuideRootCardView: View {
+    let node: GuideNode
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            HStack(alignment: .top) {
+                VStack(alignment: .leading, spacing: 6) {
+                    Text(node.title)
+                        .font(.headline)
+                        .foregroundColor(Color(red: 0.04, green: 0.18, blue: 0.34))
+
+                    Text(node.summary)
+                        .font(.subheadline)
+                        .foregroundColor(Color(red: 0.25, green: 0.36, blue: 0.48))
+                        .lineLimit(3)
+                }
+
+                Spacer(minLength: 10)
+
+                Image(systemName: "chevron.right.circle.fill")
+                    .font(.title3)
+                    .foregroundColor(Color(red: 0.05, green: 0.50, blue: 0.80))
+            }
+
+            Text("\(node.childrenCount) tópicos")
+                .font(.caption2)
+                .fontWeight(.bold)
+                .foregroundColor(Color(red: 0.05, green: 0.50, blue: 0.80))
+                .padding(.horizontal, 10)
+                .padding(.vertical, 7)
+                .background(Color(red: 0.05, green: 0.50, blue: 0.80).opacity(0.10))
+                .clipShape(Capsule())
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        .shadow(color: Color.black.opacity(0.12), radius: 18, x: 0, y: 12)
+    }
+}
+
+struct GuideSearchCardView: View {
+    let result: GuideSearchResult
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text(result.node.title)
+                .font(.headline)
+                .foregroundColor(Color(red: 0.04, green: 0.18, blue: 0.34))
+
+            Text(result.node.summary)
+                .font(.subheadline)
+                .foregroundColor(Color(red: 0.25, green: 0.36, blue: 0.48))
+                .lineLimit(2)
+
+            Text(result.trail.map(\.title).joined(separator: "  >  "))
+                .font(.caption)
+                .foregroundColor(Color(red: 0.05, green: 0.50, blue: 0.80))
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .shadow(color: Color.black.opacity(0.10), radius: 14, x: 0, y: 10)
+    }
+}
+
+struct GuideNodeDetailView: View {
+    let node: GuideNode
+    let trail: [GuideNode]
+
+    @State private var markdown = ""
+    @State private var isLoading = false
+    @State private var errorMessage: String? = nil
+
+    private var contentBlocks: [GuideContentBlock] {
+        parseContent(markdown, baseDirectory: node.assetDirectoryPath)
+    }
+
+    var body: some View {
+        ZStack {
+            LinearGradient(
+                colors: [
+                    Color(red: 0.04, green: 0.10, blue: 0.19),
+                    Color(red: 0.05, green: 0.19, blue: 0.34),
+                    Color(red: 0.62, green: 0.86, blue: 0.96)
+                ],
+                startPoint: .topLeading,
+                endPoint: .bottomTrailing
+            )
+            .ignoresSafeArea()
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 18) {
+                    heroSection
+
+                    if !node.children.isEmpty {
+                        childrenSection
+                    }
+
+                    contentSection
+                }
+                .padding(20)
+            }
+            .refreshable {
+                await loadMarkdown(forceReload: true)
+            }
+        }
+        .navigationTitle(node.title)
+        .navigationBarTitleDisplayMode(.inline)
+        .task {
+            await loadMarkdown(forceReload: false)
+        }
+    }
+
+    private var heroSection: some View {
+        VStack(alignment: .leading, spacing: 14) {
+            Text(node.title)
+                .font(.system(size: 30, weight: .bold, design: .rounded))
+                .foregroundColor(.white)
+
+            Text(node.summary)
+                .font(.subheadline)
+                .foregroundColor(Color.white.opacity(0.86))
+
+            HStack(spacing: 10) {
+                detailPill(text: trail.map(\.title).joined(separator: " • "), icon: "point.topleft.down.curvedto.point.bottomright.up")
+                if node.hasContent {
+                    detailPill(text: "Conteúdo oficial", icon: "checkmark.seal.fill")
+                }
+            }
+        }
+        .padding(22)
+        .background(Color.white.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 28, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: 28, style: .continuous)
+                .stroke(Color.white.opacity(0.12), lineWidth: 1)
+        )
+    }
+
+    private func detailPill(text: String, icon: String) -> some View {
+        HStack(spacing: 8) {
+            Image(systemName: icon)
+            Text(text)
+                .lineLimit(1)
+        }
+        .font(.caption)
+        .fontWeight(.bold)
+        .foregroundColor(.white)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(Color.white.opacity(0.12))
+        .clipShape(Capsule())
+    }
+
+    private var childrenSection: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text("Tópicos desta área")
+                .font(.headline)
+                .foregroundColor(.white)
+
+            VStack(spacing: 12) {
+                ForEach(node.children) { child in
+                    NavigationLink(destination: GuideNodeDetailView(node: child, trail: trail + [child])) {
+                        GuideChildCardView(node: child)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var contentSection: some View {
+        if isLoading {
+            VStack(spacing: 12) {
+                ProgressView()
+                    .tint(.white)
+                Text("Carregando conteúdo do guia...")
+                    .foregroundColor(.white)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(.vertical, 32)
+        } else if let errorMessage {
+            VStack(spacing: 12) {
+                Image(systemName: "exclamationmark.bubble.fill")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundColor(.white)
+                Text(errorMessage)
+                    .font(.subheadline)
+                    .multilineTextAlignment(.center)
+                    .foregroundColor(.white)
+            }
+            .padding(24)
+            .frame(maxWidth: .infinity)
+            .background(Color.white.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        } else if markdown.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            VStack(alignment: .leading, spacing: 12) {
+                Text("Resumo")
+                    .font(.headline)
+                    .foregroundColor(.white)
+                Text(node.summary)
+                    .font(.subheadline)
+                    .foregroundColor(Color.white.opacity(0.86))
+            }
+            .padding(22)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.white.opacity(0.10))
+            .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
+        } else {
+            VStack(alignment: .leading, spacing: 14) {
+                ForEach(contentBlocks) { block in
+                    switch block.kind {
+                    case .markdown(let text):
+                        MarkdownBlock(content: text, foregroundColor: Color(red: 0.16, green: 0.27, blue: 0.38))
+                            .padding(18)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .background(Color.white)
+                            .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+                            .shadow(color: Color.black.opacity(0.10), radius: 14, x: 0, y: 10)
+                    case .image(let url, let alt):
+                        GuideImageCard(url: url, alt: alt)
+                    }
+                }
+            }
+        }
+    }
+
+    private func loadMarkdown(forceReload: Bool) async {
+        guard let repoFilePath = node.repoFilePath else {
+            await MainActor.run {
+                markdown = ""
+                errorMessage = nil
+                isLoading = false
+            }
+            return
+        }
+
+        if !forceReload, !markdown.isEmpty {
+            return
+        }
+
+        await MainActor.run {
+            isLoading = true
+            errorMessage = nil
+        }
+
+        do {
+            let content = try await GuideContentCache.shared.markdown(for: repoFilePath)
+            await MainActor.run {
+                markdown = content
+                isLoading = false
+            }
+        } catch {
+            await MainActor.run {
+                markdown = ""
+                errorMessage = "Não foi possível carregar este guia agora."
+                isLoading = false
+            }
+        }
+    }
+
+    private func parseContent(_ text: String, baseDirectory: String?) -> [GuideContentBlock] {
+        guard let regex = try? NSRegularExpression(pattern: "!\\[([^\\]]*)\\]\\(([^)]+)\\)") else {
+            return [.init(kind: .markdown(text))]
+        }
+
+        let nsText = text as NSString
+        let matches = regex.matches(in: text, range: NSRange(location: 0, length: nsText.length))
+        if matches.isEmpty {
+            return [.init(kind: .markdown(text))]
+        }
+
+        var blocks: [GuideContentBlock] = []
+        var currentLocation = 0
+
+        for match in matches {
+            if match.range.location > currentLocation {
+                let chunk = nsText.substring(with: NSRange(location: currentLocation, length: match.range.location - currentLocation))
+                if !chunk.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    blocks.append(.init(kind: .markdown(chunk)))
+                }
+            }
+
+            let alt = match.range(at: 1).location != NSNotFound ? nsText.substring(with: match.range(at: 1)) : ""
+            let path = match.range(at: 2).location != NSNotFound ? nsText.substring(with: match.range(at: 2)) : ""
+            if let imageURL = GuideCatalog.resolvedAssetURL(relativePath: path, baseDirectory: baseDirectory) {
+                blocks.append(.init(kind: .image(url: imageURL, alt: alt)))
+            }
+
+            currentLocation = match.range.location + match.range.length
+        }
+
+        if currentLocation < nsText.length {
+            let trailing = nsText.substring(from: currentLocation)
+            if !trailing.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                blocks.append(.init(kind: .markdown(trailing)))
+            }
+        }
+
+        return blocks.isEmpty ? [.init(kind: .markdown(text))] : blocks
+    }
+}
+
+struct GuideChildCardView: View {
+    let node: GuideNode
+
+    var body: some View {
+        HStack(alignment: .top, spacing: 12) {
+            VStack(alignment: .leading, spacing: 6) {
+                Text(node.title)
+                    .font(.headline)
+                    .foregroundColor(Color(red: 0.04, green: 0.18, blue: 0.34))
+
+                Text(node.summary)
+                    .font(.subheadline)
+                    .foregroundColor(Color(red: 0.25, green: 0.36, blue: 0.48))
+                    .lineLimit(3)
+            }
+
+            Spacer()
+
+            Image(systemName: "chevron.right")
+                .foregroundColor(Color(red: 0.05, green: 0.50, blue: 0.80))
+                .padding(.top, 4)
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .shadow(color: Color.black.opacity(0.10), radius: 14, x: 0, y: 10)
+    }
+}
+
+struct GuideImageCard: View {
+    let url: URL
+    let alt: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            AsyncImage(url: url) { phase in
+                switch phase {
+                case .empty:
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(Color.white.opacity(0.90))
+                        ProgressView()
+                    }
+                    .frame(minHeight: 180)
+                case .success(let image):
+                    image
+                        .resizable()
+                        .scaledToFit()
+                        .frame(maxWidth: .infinity)
+                        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+                case .failure:
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 18, style: .continuous)
+                            .fill(Color.white.opacity(0.90))
+                        VStack(spacing: 8) {
+                            Image(systemName: "photo")
+                                .font(.title3)
+                                .foregroundColor(Color(red: 0.05, green: 0.50, blue: 0.80))
+                            Text("Não foi possível carregar a imagem.")
+                                .font(.caption)
+                                .foregroundColor(Color(red: 0.18, green: 0.27, blue: 0.38))
+                        }
+                    }
+                    .frame(minHeight: 180)
+                @unknown default:
+                    EmptyView()
+                }
+            }
+
+            if !alt.isEmpty {
+                Text(alt)
+                    .font(.caption)
+                    .foregroundColor(Color(red: 0.18, green: 0.27, blue: 0.38))
+            }
+        }
+        .padding(18)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(Color.white)
+        .clipShape(RoundedRectangle(cornerRadius: 22, style: .continuous))
+        .shadow(color: Color.black.opacity(0.10), radius: 14, x: 0, y: 10)
+    }
+}
+
+struct MarkdownBlock: View {
+    let content: String
+    let foregroundColor: Color
+
+    var body: some View {
+        Text(attributedContent)
+            .font(.body)
+            .foregroundColor(foregroundColor)
+            .lineSpacing(5)
+            .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private var attributedContent: AttributedString {
+        let options = AttributedString.MarkdownParsingOptions(
+            interpretedSyntax: .full,
+            failurePolicy: .returnPartiallyParsedIfPossible
+        )
+
+        if let parsed = try? AttributedString(markdown: content, options: options) {
+            return parsed
+        }
+
+        return AttributedString(content)
     }
 }
 

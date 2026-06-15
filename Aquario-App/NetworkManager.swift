@@ -259,14 +259,19 @@ public final class NetworkManager {
         return entidades
     }
     
-    public func fetchGuias() async throws -> [Guia] {
-        let guias: [Guia] = try await request(path: "guias")
+    public func fetchGuias(cursoId: String? = nil) async throws -> [Guia] {
+        let queryItems = cursoId.map { [URLQueryItem(name: "cursoId", value: $0)] }
+        let guias: [Guia] = try await request(path: "guias", queryItems: queryItems)
         
         await MainActor.run {
             StorageProvider.shared.cacheGuias(guias)
         }
         
         return guias
+    }
+
+    public func fetchGuiaSecoes(guiaId: String) async throws -> [SecaoGuia] {
+        try await request(path: "guias/\(guiaId)/secoes")
     }
     
     public func logout() {

@@ -156,6 +156,9 @@ public struct Guia: Codable, Identifiable, Hashable {
     public let slug: String
     public let descricao: String?
     public let tags: [String]
+    public let status: String?
+    public let cursoId: String?
+    public let curso: CursoSummary?
     public let secoes: [SecaoGuia]?
 }
 
@@ -166,6 +169,7 @@ public struct SecaoGuia: Codable, Identifiable, Hashable {
     public let slug: String
     public let ordem: Int
     public let conteudo: String?
+    public let status: String?
     public let subsecoes: [SubSecaoGuia]?
 }
 
@@ -176,6 +180,7 @@ public struct SubSecaoGuia: Codable, Identifiable, Hashable {
     public let slug: String
     public let ordem: Int
     public let conteudo: String?
+    public let status: String?
 }
 
 public struct Centro: Codable, Identifiable, Hashable {
