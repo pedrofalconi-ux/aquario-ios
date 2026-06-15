@@ -50,6 +50,7 @@ public struct ContentView: View {
         }
         .onAppear {
             configureTabBarAppearance()
+            configureNavigationBarAppearance()
             checkAuthToken()
         }
     }
@@ -79,6 +80,28 @@ public struct ContentView: View {
         UITabBar.appearance().standardAppearance = appearance
         UITabBar.appearance().scrollEdgeAppearance = appearance
     }
+
+    private func configureNavigationBarAppearance() {
+        let appearance = UINavigationBarAppearance()
+        appearance.configureWithTransparentBackground()
+        appearance.backgroundEffect = UIBlurEffect(style: .systemUltraThinMaterialDark)
+        appearance.backgroundColor = UIColor(red: 6/255, green: 16/255, blue: 32/255, alpha: 0.72)
+        appearance.shadowColor = .clear
+        appearance.titleTextAttributes = [
+            .foregroundColor: UIColor.white,
+            .font: UIFont.systemFont(ofSize: 17, weight: .semibold)
+        ]
+        appearance.largeTitleTextAttributes = [
+            .foregroundColor: UIColor.white,
+            .font: UIFont.systemFont(ofSize: 31, weight: .bold)
+        ]
+
+        let tinted = UIColor(red: 111/255, green: 219/255, blue: 245/255, alpha: 1)
+        UINavigationBar.appearance().standardAppearance = appearance
+        UINavigationBar.appearance().scrollEdgeAppearance = appearance
+        UINavigationBar.appearance().compactAppearance = appearance
+        UINavigationBar.appearance().tintColor = tinted
+    }
 }
 
 struct ContentView_Previews: PreviewProvider {
@@ -86,4 +109,3 @@ struct ContentView_Previews: PreviewProvider {
         ContentView()
     }
 }
-

@@ -134,7 +134,7 @@ public struct EntidadesView: View {
                         .font(.system(size: 38, weight: .bold, design: .rounded))
                         .foregroundColor(.white)
 
-                    Text("As mesmas fotos, nomes e agrupamentos do Aquário para você reconhecer cada laboratório, grupo, liga e entidade acadêmica sem estranhar a mudança de plataforma.")
+                    Text("Encontre laboratorios, grupos, ligas, atleticas e centros academicos do CI para descobrir contatos, locais e formas de participar.")
                         .font(.subheadline)
                         .foregroundColor(Color.white.opacity(0.78))
                         .fixedSize(horizontal: false, vertical: true)
